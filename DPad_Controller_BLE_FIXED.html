@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>C3 Car — D-Pad Controller</title>
+<style>
+:root { --ink:#151515; --muted:#7b8189; --line:#e4e5e8; --red:#e95b4b; }
+* { box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+html,body { margin:0; width:100%; min-height:100%; font-family:Inter,system-ui,-apple-system,Arial,sans-serif; color:var(--ink); }
+body {
+  min-height:100dvh; overflow:hidden;
+  background:linear-gradient(160deg,#bfe6ff 0%,#eaf7ff 40%,#fff 76%);
+  touch-action:none;
+}
+.app { height:100dvh; min-height:320px; display:flex; flex-direction:column; padding:clamp(10px,2.3vw,30px) clamp(12px,3vw,48px); gap:clamp(8px,1.8vh,20px); }
+header { display:flex; align-items:center; gap:clamp(14px,2vw,28px); min-height:48px; flex-shrink:0; }
+.back { width:clamp(44px,5vw,72px); height:clamp(44px,5vw,72px); border-radius:17px; background:white; box-shadow:0 4px 18px #0000000b; font-size:clamp(28px,3vw,42px); display:grid; place-items:center; border:0; }
+.brand { font-size:clamp(19px,2.5vw,34px); font-weight:800; letter-spacing:-.5px; }
+.status { margin-left:auto; display:flex; align-items:center; gap:8px; color:#616a73; font-size:clamp(11px,1.3vw,16px); }
+.dot { width:10px; height:10px; border-radius:50%; background:#e95b4b; }
+.status.on .dot { background:#21b77a; }
+#connect { border:0; border-radius:999px; background:#f8c94f; padding:clamp(10px,1.4vw,18px) clamp(16px,2.2vw,28px); font-size:clamp(12px,1.4vw,17px); font-weight:750; white-space:nowrap; }
+main { flex:1; min-height:0; display:grid; grid-template-columns:1fr minmax(150px,0.72fr) 1fr; gap:clamp(14px,4vw,70px); align-items:stretch; }
+.panel { background:#fff; border-radius:clamp(24px,4vw,62px); box-shadow:0 12px 30px #0000000b; border:1px solid #e8e9ec; overflow:hidden; min-height:0; }
+.vertical { display:grid; grid-template-rows:1fr 1px 1fr; padding:12px; }
+.horizontal { display:grid; grid-template-columns:1fr 1px 1fr; padding:12px; }
+.sep { background:var(--line); }
+.key { border:0; background:transparent; color:#111; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:clamp(8px,1.5vh,18px); font-size:clamp(12px,1.5vw,20px); letter-spacing:1.5px; color:var(--muted); touch-action:none; border-radius:20px; }
+.key svg { width:clamp(26px,3.4vw,46px); height:clamp(26px,3.4vw,46px); stroke:#111; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.key.down { background:#f3f8fb; color:#111; }
+.center { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:clamp(12px,3vh,34px); }
+.features { display:flex; gap:clamp(8px,1.5vw,20px); }
+.feature { border:0; background:#fff; border-radius:25px; box-shadow:0 8px 20px #00000009; min-width:clamp(58px,8vw,120px); padding:clamp(10px,1.5vw,20px); display:flex; flex-direction:column; align-items:center; gap:7px; font-size:clamp(11px,1.4vw,18px); font-weight:650; }
+.feature svg { width:clamp(22px,3vw,38px); height:clamp(22px,3vw,38px); fill:#111; }
+#stop { width:100%; min-height:clamp(58px,8vw,112px); background:var(--red); color:white; border:0; border-radius:clamp(18px,2.6vw,32px); font-size:clamp(17px,2.1vw,28px); font-weight:800; box-shadow:0 8px 20px #0000000b; }
+#stop.down { filter:brightness(.9); transform:scale(.98); }
+#telemetry { font-size:clamp(10px,1.2vw,15px); color:#6f7a83; text-align:center; min-height:1em; }
+footer { display:flex; align-items:center; gap:14px; flex-shrink:0; background:#ffffffd9; border:1px solid #e8e9ec; border-radius:22px; padding:8px 18px; }
+footer label { font-size:clamp(12px,1.4vw,17px); color:#75818a; white-space:nowrap; }
+input[type=range] { flex:1; min-width:40px; accent-color:#f4c247; height:26px; }
+output { min-width:44px; text-align:right; font-size:clamp(13px,1.6vw,20px); font-weight:750; }
+.msg { position:fixed; left:50%; top:12px; transform:translateX(-50%); z-index:10; background:#fff; color:#9e2921; border-radius:12px; padding:10px 14px; box-shadow:0 6px 22px #0002; display:none; max-width:90vw; font-size:13px; }
+@media (orientation:portrait) {
+  body { overflow:auto; touch-action:pan-y; }
+  .app { height:auto; min-height:100dvh; }
+  main { grid-template-columns:1fr 0.75fr; grid-template-rows:minmax(190px,32vh) minmax(190px,32vh); gap:10px; }
+  .vertical { grid-column:1; grid-row:1; }
+  .horizontal { grid-column:2; grid-row:1; }
+  .center { grid-column:1 / -1; grid-row:2; flex-direction:row; gap:14px; }
+  .features { flex-direction:column; }
+  #stop { max-width:230px; }
+  .feature { min-width:70px; }
+  footer { margin-top:4px; }
+}
+@media (max-height:430px) and (orientation:landscape) {
+  .app { padding-top:6px; padding-bottom:6px; gap:6px; }
+  header { min-height:36px; }
+  .back { height:36px; width:36px; border-radius:12px; }
+  .panel { border-radius:26px; }
+  .vertical,.horizontal { padding:6px; }
+  .center { gap:7px; }
+  .feature { padding:6px; border-radius:14px; }
+  #stop { min-height:48px; }
+  footer { padding:4px 12px; }
+}
+</style>
+</head>
+<body>
+<div class="msg" id="msg"></div>
+<div class="app">
+  <header>
+    <button class="back" aria-label="Back" id="backBtn">‹</button>
+    <div class="brand">D-Pad Controller</div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Disconnected</span></div>
+    <button id="connect">Connect car</button>
+  </header>
+
+  <main>
+    <!-- LEFT SIDE: steering left/right -->
+    <section class="panel horizontal" aria-label="Steering controls">
+      <button class="key" data-dir="left" aria-label="Left">
+        <svg viewBox="0 0 24 24"><path d="M15 4 7 12l8 8"/></svg><span>LEFT</span>
+      </button>
+      <div class="sep"></div>
+      <button class="key" data-dir="right" aria-label="Right">
+        <svg viewBox="0 0 24 24"><path d="m9 4 8 8-8 8"/></svg><span>RIGHT</span>
+      </button>
+    </section>
+
+    <section class="center">
+      <div class="features">
+        <button class="feature" id="gyro" title="Gyro is not enabled">
+          <svg viewBox="0 0 24 24"><path d="M12 2 2 12l10 10 10-10L12 2zm0 5v5l4 3" /></svg>
+          <span>Gyro</span>
+        </button>
+        <button class="feature" id="voice" title="Voice control is not enabled">
+          <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 0-4 4v4a4 4 0 0 0 8 0V6a4 4 0 0 0-4-4zM5 10v1a7 7 0 0 0 14 0v-1M12 18v4m-4 0h8"/></svg>
+          <span>Voice</span>
+        </button>
+      </div>
+      <button id="stop">■ &nbsp; STOP</button>
+      <div id="telemetry">Motors stopped</div>
+    </section>
+
+    <!-- RIGHT SIDE: forward/back, as requested -->
+    <section class="panel vertical" aria-label="Drive controls">
+      <button class="key" data-dir="forward" aria-label="Forward">
+        <svg viewBox="0 0 24 24"><path d="m4 15 8-8 8 8"/></svg><span>FWD</span>
+      </button>
+      <div class="sep"></div>
+      <button class="key" data-dir="back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="m4 9 8 8 8-8"/></svg><span>BACK</span>
+      </button>
+    </section>
+  </main>
+
+  <footer>
+    <label for="lim">Max speed</label>
+    <input type="range" id="lim" min="20" max="100" value="100">
+    <output id="limV">100%</output>
+  </footer>
+</div>
+<script>
+const SERVICE_UUID='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const RX_UUID='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const TX_UUID='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+const $=id=>document.getElementById(id);
+const encoder=new TextEncoder(), decoder=new TextDecoder();
+let device=null, rx=null, tx=null, connected=false, writing=false, queued=null;
+let active=new Set(), speed=100, timer=null, telemetryBuffer='', disconnectHandler=null;
+
+function toast(text){const el=$('msg');el.textContent=text;el.style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.display='none',4500);}
+function setStatus(on,text){$('status').classList.toggle('on',on);$('statusText').textContent=text;$('connect').textContent=on?'Disconnect':'Connect car';}
+function state(){
+  const x=(active.has('right')?100:0)-(active.has('left')?100:0);
+  const y=(active.has('forward')?100:0)-(active.has('back')?100:0);
+  return {x,y};
+}
+function updateLabel(){
+  const {x,y}=state();
+  let label='Motors stopped';
+  if(y>0&&x<0)label='Forward + left';
+  else if(y>0&&x>0)label='Forward + right';
+  else if(y<0&&x<0)label='Reverse + left';
+  else if(y<0&&x>0)label='Reverse + right';
+  else if(y>0)label='Forward';
+  else if(y<0)label='Reverse';
+  else if(x<0)label='Left';
+  else if(x>0)label='Right';
+  $('telemetry').textContent=label;
+}
+async function send(command){
+  if(!rx||!connected)return;
+  if(writing){queued=command;return;}
+  writing=true;
+  try {
+    if(rx.writeValueWithoutResponse) await rx.writeValueWithoutResponse(encoder.encode(command+'\n'));
+    else await rx.writeValue(encoder.encode(command+'\n'));
+  } catch(e) { toast('Command send error: '+e.message); }
+  writing=false;
+  if(queued!==null){const q=queued;queued=null;send(q);}
+}
+function sendDrive(){const {x,y}=state();updateLabel();send(`J,${x},${y}`);}
+function start(dir,btn){active.add(dir);btn.classList.add('down');sendDrive();}
+function release(dir,btn){active.delete(dir);btn.classList.remove('down');sendDrive();}
+document.querySelectorAll('[data-dir]').forEach(btn=>{
+  const dir=btn.dataset.dir;
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();btn.setPointerCapture(e.pointerId);start(dir,btn);});
+  const end=e=>{if(e)e.preventDefault();release(dir,btn);};
+  btn.addEventListener('pointerup',end);btn.addEventListener('pointercancel',end);btn.addEventListener('lostpointercapture',()=>release(dir,btn));
+});
+$('stop').addEventListener('pointerdown',e=>{e.preventDefault();active.clear();document.querySelectorAll('[data-dir]').forEach(b=>b.classList.remove('down'));$('stop').classList.add('down');send('S');updateLabel();});
+$('stop').addEventListener('pointerup',()=> $('stop').classList.remove('down'));
+$('stop').addEventListener('pointercancel',()=> $('stop').classList.remove('down'));
+$('lim').addEventListener('input',e=>{$('limV').textContent=e.target.value+'%';send('V,'+e.target.value);});
+$('backBtn').addEventListener('click',()=>{active.clear();send('S');updateLabel();});
+$('gyro').addEventListener('click',()=>toast('Gyro control is not enabled in this firmware.'));
+$('voice').addEventListener('click',()=>toast('Voice control is not enabled in this firmware.'));
+async function connect(){
+  if(!navigator.bluetooth){toast('Bluetooth Web API unavailable. Android Chrome may block BLE from content:// file previews. Host this HTML on HTTPS or localhost.');return;}
+  if(!window.isSecureContext){toast('Open this page from HTTPS or localhost; content:// file preview may block Bluetooth.');return;}
+  try{
+    setStatus(false,'Selecting car…');
+    device=await navigator.bluetooth.requestDevice({filters:[{name:'KidsZee Car'}],optionalServices:[SERVICE_UUID]});
+    if(disconnectHandler && device) device.removeEventListener('gattserverdisconnected',disconnectHandler);
+    disconnectHandler=()=>resetBleState('Disconnected');
+    device.addEventListener('gattserverdisconnected',disconnectHandler);
+    setStatus(false,'Connecting…');
+    const server=await device.gatt.connect();
+    const service=await server.getPrimaryService(SERVICE_UUID);
+    rx=await service.getCharacteristic(RX_UUID);
+    tx=await service.getCharacteristic(TX_UUID);
+    await tx.startNotifications();
+    tx.addEventListener('characteristicvaluechanged',e=>{
+      telemetryBuffer+=decoder.decode(e.target.value);
+      let i;
+      while((i=telemetryBuffer.indexOf('\n'))>=0){
+        const line=telemetryBuffer.slice(0,i).trim();telemetryBuffer=telemetryBuffer.slice(i+1);
+        if(line.startsWith('T,')){const parts=line.split(',');$('telemetry').textContent='Drive '+parts[1]+'% · Steering '+parts[2]+'%';}
+      }
+    });
+    connected=true;setStatus(true,'Connected');await send('V,'+$('lim').value);sendDrive();
+    if(timer)clearInterval(timer);
+    timer=setInterval(()=>{if(connected){const {x,y}=state();send(`J,${x},${y}`);}},200);
+  }catch(e){resetBleState('Disconnected');toast('Connection failed: '+e.message);}
+}
+$('connect').addEventListener('click',()=>{if(device&&device.gatt&&device.gatt.connected){send('S');device.gatt.disconnect();resetBleState('Disconnected');}else connect();});
+window.addEventListener('blur',()=>{active.clear();document.querySelectorAll('[data-dir]').forEach(b=>b.classList.remove('down'));send('S');updateLabel();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){active.clear();send('S');updateLabel();}});
+updateLabel();
+</script>
+</body>
+</html>
