@@ -4,7 +4,6 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 
-// Some ESP32 core versions (NimBLE-based BLE) don't ship this header.
 // If it is missing, we simply skip the manual TX-power setting.
 #if __has_include(<esp_gap_ble_api.h>)
   #include <esp_gap_ble_api.h>
@@ -24,23 +23,6 @@
 //   J,x,y  x = steering (-100..100), y = throttle (-100..100)
 //   V,n    speed limit (0..100)
 //   S      immediate stop
-//
-// WHAT CHANGED FOR 18650 / NO MORE RANDOM RESETS:
-//   1. Soft ramp (slew limit): motor PWM ramps up gradually, so the
-//      big start-up current spike no longer drags the battery voltage
-//      down and trips the ESP32 brownout reset (= BLE disconnect).
-//   2. Steering PWM cap: steering motor stalls at full lock and draws
-//      stall current; capped to STEER_MAX_PWM.
-//   3. BLE TX power reduced (P9 = big current bursts). Adjustable.
-//   4. Motor work moved out of the BLE callback into loop() so the
-//      BLE stack is never blocked.
-//   5. Optional battery monitor + low-battery cutoff (BAT_ADC_PIN).
-//   6. Optional brownout-detector disable (DISABLE_BROWNOUT).
-//   7. Watchdog slightly relaxed (700ms) for BLE jitter.
-//
-// SAFETY (unchanged):
-//   - Motors OFF on BLE disconnect, watchdog timeout, malformed input.
-// ============================================================
 
 #define DRIVE_IN1  4
 #define DRIVE_IN2  5
